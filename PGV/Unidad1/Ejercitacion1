@@ -1,0 +1,393 @@
+
+1. Objetivos de la Práctica
+
+Al finalizar esta sesión, serás capaz de:
+
+    Instalar y configurar un entorno GNU/Linux en una máquina virtual.
+
+    Distinguir entre procesos, hilos (threads) y demonios (daemons).
+
+    Utilizar la terminal para monitorizar y gestionar procesos y servicios del sistema.
+
+    Comprender y visualizar las dependencias entre procesos.
+
+    Iniciar, detener, enviar a segundo plano y finalizar procesos de forma segura.
+
+    Comprobar las consecuencias de una mala gestión de procesos en un entorno controlado.
+
+    Utilizar tuberías y redirecciones para procesar y almacenar información.
+
+    Documentar el trabajo técnico de forma clara y profesional.
+
+2. Fase 1: Preparación del Entorno de Trabajo
+
+Nuestro primer paso será montar nuestro propio "laboratorio". Dado que no podemos alterar los equipos del aula, crearemos un entorno seguro y aislado utilizando una máquina virtual.
+
+2.1. Descarga del Software Necesario
+
+    Máquina Virtual: Utilizaremos VirtualBox, un software gratuito y muy extendido.
+
+    Distribución GNU/Linux: Para esta práctica, usaremos Lubuntu. Es una distribución ligera, basada en Ubuntu (lo que nos da acceso a una gran cantidad de software y documentación) y su bajo consumo de recursos la hace ideal para virtualizar.
+
+        Descarga la imagen ISO desde: https://lubuntu.me/downloads/ (elige la versión LTS - Long Term Support).
+
+2.2. Creación e Instalación de la Máquina Virtual
+
+    Abre VirtualBox y haz clic en "Nueva".
+
+    Nombre y sistema operativo:
+
+        Nombre: DAM_Linux_[TuNombre]
+
+        Tipo: Linux
+
+        Versión: Ubuntu (64-bit)
+
+    Tamaño de memoria: Asigna al menos 2048 MB (2 GB) de RAM. Si tu equipo tiene más de 8GB, puedes asignarle 4096 MB.
+
+    Disco duro:
+
+        Selecciona "Crear un disco duro virtual ahora".
+
+        Tipo de archivo: VDI (VirtualBox Disk Image).
+
+        Almacenamiento: Reservado dinámicamente.
+
+        Tamaño: 25 GB será suficiente.
+
+    Configuración final:
+
+        Con la máquina virtual creada, selecciónala y ve a "Configuración" > "Almacenamiento".
+
+        En "Controlador IDE", haz clic en el icono del CD que dice "Vacío".
+
+        A la derecha, en "Atributos", haz clic de nuevo en el icono del CD y selecciona "Seleccionar un archivo de disco...".
+
+        Busca y selecciona la imagen .iso de Lubuntu que has descargado.
+
+    Instalación de Lubuntu:
+
+        Inicia la máquina virtual. El instalador de Lubuntu arrancará automáticamente.
+
+        Sigue los pasos del asistente. Son muy intuitivos:
+
+            Selecciona tu idioma.
+
+            Configuración del teclado: Español.
+
+            Instalación: Normal.
+
+            Tipo de instalación: "Borrar disco e instalar Lubuntu" (¡No te preocupes, esto solo afecta al disco duro VIRTUAL que hemos creado!).
+
+            Configura tu zona horaria.
+
+            Crea un usuario y contraseña.
+
+Una vez finalice la instalación, reinicia la máquina virtual.
+3. Fase 2: Explorando Procesos 
+
+Ahora que tenemos nuestro sistema, vamos a sumergirnos en la gestión de procesos a través de la terminal. Abre la aplicación de terminal (búscala como "Terminal" o "LXTerminal").
+
+3.1. El Comando ps: La Foto Fija de los Procesos
+
+El comando ps (Process Status) nos da una instantánea de los procesos que se están ejecutando en un momento concreto.
+
+    Ejercicio 3.1.1: Escribe ps y pulsa Enter. 
+
+$ ps
+
+Análisis: Verás que solo aparecen un par de procesos (bash, que es la propia terminal, y el propio ps). Esto es porque, por defecto, ps solo muestra los procesos asociados a la terminal actual.
+
+Ejercicio 3.1.2: Para ver todos los procesos que ha iniciado tu usuario, usamos la opción x. 
+
+$ ps x
+
+Análisis: Ahora la lista es más larga. Aparecen procesos del entorno gráfico que iniciaste al hacer login.
+
+Ejercicio 3.1.3: La forma más común de usar ps es con las opciones aux para obtener una vista completa y detallada de todos los procesos del sistema.
+     $ ps aux
+
+    Cabecera del comando:
+
+            USER: El usuario propietario del proceso.
+
+            PID: Process Identifier. Es el número único que identifica al proceso. Es fundamental.
+
+            %CPU: Porcentaje de uso de la CPU.
+
+            %MEM: Porcentaje de uso de la memoria RAM.
+
+            TTY: La terminal asociada al proceso. ? significa que no tiene ninguna (es un demonio o servicio).
+
+            STAT: El estado del proceso (R: running, S: sleeping, Z: zombie, etc.).
+
+            CMD: El comando que inició el proceso.
+
+        Entrega:
+
+            Ejecuta ps aux.
+
+            Identifica el PID del proceso lxterminal.
+
+            Haz una captura de pantalla de la terminal mostrando la salida del comando. Añádela a tu informe.
+
+3.2. Uso de Tuberías (|) y grep para Filtrar
+
+La salida de ps aux puede ser enorme. Si buscamos algo concreto, podemos "conectar" la salida de un comando con la entrada de otro usando una tubería (|). grep es un comando que filtra líneas que contienen un texto específico.
+
+        Análisis: Este comando ejecuta ps aux y, en lugar de mostrar el resultado por pantalla, se lo pasa al comando grep, que solo mostrará las líneas que contengan la palabra "firefox".
+
+        Entrega:
+
+            Abre una aplicación como el editor de texto leafpad o el navegador.
+
+            Usa ps aux | grep [nombre_aplicacion] para encontrar su PID.
+
+            Anota el PID en tu informe.
+
+            Ejercicio 3.2.1: Vamos a buscar el proceso del navegador Firefox (si no está, abre el navegador web que venga con Lubuntu).
+
+                $ ps aux | grep firefox 
+
+3.3. El Comando top: El Monitor en Tiempo Real
+
+Mientras que ps es una foto, top es un vídeo. Muestra los procesos y su consumo de recursos actualizándose en tiempo real.
+
+    Ejercicio 3.3.1: Ejecuta el comando top. 
+
+$ top
+
+Análisis: Observa la parte superior: carga del sistema, total de procesos, uso de CPU y memoria. Debajo, tienes la lista de procesos, ordenada por defecto por %CPU. Los que más consumen están arriba.Para salir de top, pulsa la tecla q.
+
+Ejercicio 3.3.2: Identificar procesos "glotones".Abre el navegador web y reproduce un vídeo de YouTube.Vuelve a la terminal y ejecuta top.
+
+Análisis: Verás que los procesos relacionados con el navegador (firefox, GeckoMain, etc.) suben a las primeras posiciones de la lista, consumiendo más CPU.
+
+Entrega:Con el vídeo reproduciéndose, haz una captura de pantalla de la salida de top.En tu informe, anota el PID y el comando del proceso que más CPU está consumiendo.
+4. Fase 3: Profundizando - Hilos de Ejecución (Threads)
+
+Ya hemos visto los procesos. Pero, ¿qué pasa dentro de ellos? Muchos programas modernos, como los navegadores, dividen sus tareas en "hilos" o "procesos ligeros" (LightWeight Processes) para ser más eficientes. Todos estos hilos pertenecen a un único proceso padre y comparten sus recursos (como la memoria).
+
+4.1. Visualizando Hilos con ps
+
+El comando ps tiene modificadores para mostrarnos también los hilos.
+
+    Ejercicio 4.1.1: Para ver todos los procesos y sus hilos, usamos el modificador -Lf.
+
+$ ps -eLf
+
+    Análisis:
+    Fíjate en las nuevas columnas:LWP: LightWeight Process ID. Es el identificador único del hilo.
+    NLWP: Number of LightWeight Processes. Indica cuántos hilos tiene el proceso.
+    El PID será el mismo para todos los hilos que pertenezcan al mismo proceso.
+
+Ejercicio 4.1.2: Vamos a aislar los hilos del navegador.
+1.Primero, obtén el PID principal del navegador como hiciste antes: ps aux | grep firefox.
+2.Anota el PID.Ahora, filtra la lista completa de hilos por ese PID.
+
+  # Sustituye [PID_DEL_NAVEGADOR] por el número que obtuviste 
+ $ ps -eLf | grep [PID_DEL_NAVEGADOR]  
+
+Análisis: Verás varias líneas. Fíjate bien: todas tienen el mismo PID, pero cada una tiene un LWP diferente. ¡Acabas de ver los hilos de un proceso en acción! La columna NLWP te confirmará el número total.
+
+    Entrega:
+
+        Realiza el ejercicio 4.1.2.
+
+        Haz una captura de pantalla de la salida del último comando, donde se vean claramente las columnas PID, LWP y NLWP, demostrando la relación proceso-hilos.
+
+5. Fase 4: Procesos en Segundo Plano - Demonios y Servicios 
+
+No todos los procesos son iniciados por el usuario. El sistema operativo ejecuta muchos procesos por su cuenta, en segundo plano, sin una terminal asociada. Estos son los demonios (daemons). Realizan tareas esenciales: gestionar la red, programar tareas, servir páginas web, etc. En los sistemas Linux modernos, estos demonios se gestionan a través de un sistema de servicios, normalmente systemd.
+
+5.1. Interactuando con Servicios (systemctl)
+
+El comando principal para gestionar servicios es systemctl. Como gestiona partes críticas del sistema, casi siempre necesita privilegios de administrador, que obtenemos con sudo.
+
+    Ejercicio 5.1.1: Instalar y gestionar un servicio común: SSH.
+    El servicio SSH permite conectarse de forma remota y segura a la terminal de un equipo. Es un demonio perfecto para nuestro ejemplo.
+
+Actualiza la lista de paquetes:
+
+$ sudo apt update
+
+Instala el servidor SSH: 
+
+$ sudo apt install openssh-server
+
+Comprueba el estado del servicio: El servicio ssh (o sshd) debería haberse iniciado automáticamente.
+
+  $ systemctl status ssh  
+
+Análisis: La salida te dirá si está "active (running)". Fíjate en las últimas líneas, que muestran las trazas de su ejecución.
+
+Verifica el demonio con ps:
+
+ $ ps aux | grep sshd
+
+Verás un proceso sshd cuyo usuario es root y su TTY es ?. ¡Este es nuestro demonio!
+
+Ejercicio 5.1.2: Detener e iniciar el servicio.
+
+Detén el servicio: code Bash
+
+$ sudo systemctl stop ssh
+
+Comprueba su estado de nuevo con systemctl status ssh (verás que está "inactive (dead)") y con ps aux | grep sshd (verás que ya no aparece el proceso).
+
+Vuelve a iniciarlo: code Bash
+
+  $ sudo systemctl start ssh  
+
+    Entrega:
+
+        Haz una captura de pantalla de la salida de systemctl status ssh cuando el servicio está activo.
+
+        Haz otra captura de la salida de ps aux | grep sshd que muestre el demonio en ejecución.
+
+6. Fase 5: El Poder y el Peligro - La Gestión Activa de Procesos 
+
+Ya sabemos ver e iniciar procesos. Ahora vamos a finalizarlos, viendo el impacto que tiene.
+
+6.1. El Comando kill: Enviando Señales
+Como vimos, kill [PID] envía una señal de terminación "educada". kill -9 [PID] envía una señal SIGKILL, una terminación forzada e inmediata.
+
+    Ejercicio 6.1.1: El Riesgo Controlado.
+    ¡ATENCIÓN! El siguiente comando HARÁ INESTABLE tu entorno gráfico. Estás a punto de "romper" tu sesión de forma controlada en la máquina virtual. Es la mejor manera de entender por qué NUNCA debes matar procesos del sistema sin saber lo que hacen.
+
+        Identifica el proceso padre de tu sesión gráfica. En Lubuntu, este proceso es lxqt-session. Es el responsable de lanzar y gestionar el panel, las ventanas, el fondo de escritorio, etc.
+
+        Vamos a encontrar su PID:
+        code Bash $ ps aux | grep lxqt-session
+
+Ighnora la línea que contiene "grep". Anota el PID del proceso principal.Prepárate para el caos. Abre un par de aplicaciones, como el editor de texto y el administrador de archivos.Ejecuta el kill -9:
+
+# Sustituye [PID_DE_LA_SESION] por el que has anotado 
+$ kill -9 [PID_DE_LA_SESION]
+
+        Análisis y Consecuencias: ¿Qué ha pasado? Es probable que:
+
+            La barra de tareas y el menú de inicio hayan desaparecido.
+
+            Los bordes de las ventanas, con los botones de minimizar/maximizar/cerrar, se hayan esfumado.
+
+            El fondo de pantalla haya cambiado a negro.
+
+            El sistema se ha vuelto prácticamente inutilizable, aunque el kernel de Linux sigue funcionando por debajo. Has matado al padre, y todos sus procesos hijos (el entorno gráfico) han muerto con él.
+
+        Recuperación: La forma más sencilla de recuperarse es reiniciar la máquina virtual. Usa el menú de VirtualBox: "Máquina" -> "Reiniciar".
+
+    Entrega:
+
+        En tu informe, describe con tus propias palabras qué ocurrió exactamente en tu pantalla después de ejecutar el comando kill -9 contra lxqt-session.
+
+        Explica por qué crees que pasó esto, basándote en el concepto de dependencia de procesos.
+
+7. Fase 6: Exportando Información
+
+Usa redirecciones (> para sobrescribir, >> para añadir) para guardar la salida de los comandos en un fichero.
+
+    Ejercicio 7.1:
+
+        Guarda la lista completa de procesos en un fichero.
+
+$ ps aux > informe_procesos.txt
+
+Añade el árbol de procesos al mismo fichero. code Bash
+
+$ pstree >> informe_procesos.txt  
+
+Entrega: Haz una captura de pantalla del contenido del fichero informe_procesos.txt abierto con un editor de texto.
+7. Fase 7: Investigación Guiada - Creando Nuestro Propio Monitor de Procesos
+
+Hemos aprendido a identificar y matar procesos manualmente. Ahora, vamos a dar un paso más allá y automatizarlo. El objetivo de esta fase es que investigues y crees un pequeño script en Bash que actúe como un vigilante del sistema.
+
+El Desafío:
+Crear un script llamado monitor.sh que haga lo siguiente:
+
+    Busque todos los procesos que estén consumiendo más de un umbral de CPU o de RAM (por ejemplo, 60%).
+
+    Para cada proceso que supere el umbral, debe mostrar en pantalla su PID, su consumo de CPU/RAM y el comando que lo ejecuta.
+
+    A continuación, debe preguntar al usuario si desea finalizar ese proceso.
+
+    Si el usuario responde afirmativamente ('s' o 'S'), el script debe matar el proceso.
+
+Pistas para la Investigación (Conceptos que necesitarás):
+
+    Crear y ejecutar un script: ¿Cómo se crea un fichero de texto con comandos? ¿Cómo se le dan permisos de ejecución (chmod)?
+
+    Bucles en Bash: Para recorrer una lista de procesos, necesitarás un bucle. Investiga el bucle while read.
+
+    Comando awk: ps aux nos da mucha información. awk es una herramienta increíblemente potente para procesar texto y extraer columnas específicas. Por ejemplo: ps aux | awk '{print $2, $3}' te mostrará solo el PID (columna 2) y el %CPU (columna 3).
+
+    Condicionales en Bash: Necesitarás una estructura if para comprobar si el consumo de CPU o RAM es mayor que el umbral. Investiga cómo se hacen las comparaciones numéricas (-gt para "greater than").
+
+    Leer la entrada del usuario: ¿Cómo se pide al usuario que escriba algo y se guarda en una variable? Investiga el comando read.
+
+    Variables: Deberás guardar el PID, el consumo, etc., en variables para poder usarlos después.
+
+Guía Paso a Paso para la Construcción del Script:
+
+    Crea el fichero: $ touch monitor.sh y ábrelo con un editor: $ leafpad monitor.sh.
+
+    La primera línea: Todo script de Bash debería empezar con #!/bin/bash.
+
+    Obtener los datos:
+
+        La base es ps aux.
+
+        Para evitar procesar la línea de la cabecera, puedes usar ps aux --no-header.
+
+        Usa awk para quedarte solo con las columnas que te interesan: PID (2), %CPU (3), %MEM (4) y el comando (11 en adelante).
+
+    El bucle principal: La estructura será algo así:
+
+ps aux --no-header | while read -r user pid cpu mem resto_del_comando; do
+# Aquí dentro irá la lógica
+done
+
+La condición: Dentro del bucle, debes comprobar los valores.
+¡Cuidado! Bash no trabaja bien con decimales en las comparaciones if. Una solución es truncar la parte decimal. Puedes investigar cómo hacerlo o usar este truco: cpu_int=${cpu%.*}.
+Tu if se verá así: if [[ $cpu_int -gt 60 || $mem_int -gt 60 ]]; then ... fi.
+La interacción: Dentro del if, muestra la información y pregunta al usuario.
+
+echo "¡ALERTA! Proceso con alto consumo detectado:"
+echo "PID: $pid, CPU: $cpu%, RAM: $mem%, Comando: $resto_del_comando"
+read -p "¿Deseas finalizar este proceso? (s/N): " respuesta
+
+La acción final: Comprueba la respuesta del usuario y actúa 
+
+    if [[ "$respuesta" == "s" || "$respuesta" == "S" ]]; then
+    kill "$pid"
+    echo "Proceso $pid finalizado."
+else
+    echo "El proceso $pid no se ha finalizado."
+fi
+
+Entrega:
+
+    Crea el script monitor.sh en tu máquina virtual.
+
+    Para probarlo, provoca un alto consumo (por ejemplo, abre muchas pestañas o un vídeo en el navegador).
+
+    Ejecuta tu script (./monitor.sh).
+
+    Adjunta a tu informe:
+
+        El código completo de tu script monitor.sh.
+
+        Una captura de pantalla de la terminal mostrando tu script en acción, detectando un proceso y finalizándolo tras tu confirmación.
+
+8. Entrega de la Práctica
+
+Crea un único documento (formato .odt o .pdf) que contenga:
+
+    Secciones: Una sección por cada punto de "Entrega" solicitado en el guion (de las fases 2, 3, 4, 5, 6 y 7).
+
+    Capturas de pantalla: Claras y bien recortadas.
+
+    Respuestas y descripciones: Los PID, comandos y, muy importante, la descripción de lo que ocurrió en la fase del "Riesgo Controlado".
+
+Crea un único documento (.odt o .pdf) que contenga todas las entregas solicitadas, incluyendo la nueva Fase 7: el código de tu script y la captura de su ejecución.
+

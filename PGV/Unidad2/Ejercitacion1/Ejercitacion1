@@ -1,0 +1,164 @@
+Introducción
+
+¡Bienvenidos a las Olimpiadas de la Concurrencia! Vamos a simular una carrera entre varios "corredores". Cada corredor será un hilo (Thread) que avanzará una distancia determinada. Sin embargo, no todo es tan simple como correr. Los corredores necesitan pasar por un "puesto de avituallamiento" para coger una botella de agua, pero este puesto es muy pequeño y solo puede ser usado por un corredor a la vez.
+
+Tu misión es programar esta simulación, asegurando que los corredores se comporten correctamente, la carrera sea justa y los resultados se muestren de forma ordenada.
+
+Objetivos de Aprendizaje
+
+    Crear y lanzar hilos usando la interfaz Runnable.
+
+    Gestionar múltiples hilos utilizando una lista (ArrayList).
+
+    Sincronizar el hilo principal con los hilos corredores usando el método join().
+
+    Identificar una "sección crítica" y protegerla usando bloques synchronized.
+
+    Implementar la comunicación entre hilos usando wait() y notifyAll() para resolver un problema de coordinación simple.
+
+    (Opcional Avanzado) Utilizar la librería java.util.concurrent para gestionar la carrera de una forma más moderna.
+
+Fase 1: Preparando a los Corredores (Creación de Hilos)
+
+En esta primera fase, nos centraremos en crear a nuestros corredores y hacer que "corran" de forma concurrente.
+
+    Crea la clase Corredor:
+
+        Esta clase debe implementar la interfaz Runnable.
+
+        Debe tener atributos como nombre (un String) y distanciaTotal (un int, por ejemplo, 10 metros).
+
+        En el método run(), simula la carrera. Puedes hacerlo con un bucle for que vaya de 1 hasta distanciaTotal.
+
+        Dentro del bucle, imprime un mensaje que indique el avance del corredor, por ejemplo: "¡[Nombre] va por el metro [i]!".
+
+        Para que la carrera sea más visible, añade una pequeña pausa en cada metro recorrido usando Thread.sleep() con un tiempo aleatorio (ej. entre 100 y 500 ms).
+
+    Crea la clase principal Carrera:
+
+        En el método main, crea una lista de Thread para gestionar a todos los corredores.
+
+        Crea 3 instancias de tu clase Corredor con nombres diferentes (ej. "Ana", "Juan", "Sara").
+
+        Por cada Corredor, crea un nuevo Thread pasándole el objeto Corredor al constructor.
+
+        Añade cada Thread a tu lista.
+
+    ¡Comienza la Carrera!
+
+        Recorre tu lista de Thread y llama al método start() en cada uno para que empiecen a correr simultáneamente.
+
+        Ejecuta el programa. Deberías ver cómo los mensajes de los corredores se intercalan en la consola. ¡Esto es el multithreading en acción!
+
+Fase 2: La Línea de Meta (Sincronización con join())
+
+Has lanzado a los corredores, pero tu programa principal (main) termina inmediatamente, sin esperar a que la carrera acabe. ¡No podemos anunciar al ganador así!
+
+    Esperar a los corredores:
+
+        En tu clase Carrera, justo después del bucle que inicia los hilos, añade otro bucle.
+
+        En este nuevo bucle, recorre de nuevo tu lista de Thread y llama al método join() en cada uno.
+
+        Añade un try-catch para la InterruptedException.
+
+    Anunciar el final:
+
+        Después de que el bucle con join() termine, imprime un mensaje final como: "¡LA CARRERA HA TERMINADO!".
+
+        Ejecuta de nuevo. Ahora, tu programa principal esperará pacientemente a que todos los hilos Corredor hayan finalizado su método run() antes de imprimir el mensaje final. ¡Has sincronizado el hilo principal!
+
+Fase 3: El Puesto de Avituallamiento (Sección Crítica y synchronized)
+
+A mitad de la carrera (digamos, en el metro 5), cada corredor debe pasar por un puesto de avituallamiento para coger una botella de agua. El puesto es pequeño y solo puede ser usado por un corredor a la vez.
+
+    Crea el PuestoAvituallamiento:
+
+        Crea una nueva clase. Por ahora, solo necesita un método, por ejemplo, usarPuesto(String nombreCorredor).
+
+        Dentro de este método, simula el tiempo que tarda un corredor en coger agua e hidratarse. Imprime un mensaje de inicio, haz una pausa con Thread.sleep(1000) y luego imprime un mensaje de fin.
+
+            Ej: System.out.println(nombreCorredor + " ha llegado al puesto.");
+
+            Ej: System.out.println(nombreCorredor + " ha cogido agua y sigue corriendo.");
+
+    Integra el Puesto en la Carrera:
+
+        En la clase Carrera, crea una única instancia de PuestoAvituallamiento.
+
+        Pasa esta misma instancia a cada Corredor a través de su constructor.
+
+        En el método run() de Corredor, añade una condición: if (i == 5), y dentro, llama al método usarPuesto() del objeto compartido.
+
+    ¡El Caos! (La Sección Crítica)
+
+        Ejecuta el programa. Verás que varios corredores pueden entrar al puesto "a la vez". Sus mensajes de "ha llegado" y "sigue corriendo" se mezclarán. ¡Esto es un objeto en conflicto y una sección crítica!
+
+    La Solución (synchronized):
+
+        Modifica el método usarPuesto() en la clase PuestoAvituallamiento añadiendo la palabra clave synchronized a su declaración.
+
+        Vuelve a ejecutar el programa. Ahora, los corredores esperarán educadamente su turno. Un corredor no entrará al puesto hasta que el anterior haya salido. ¡Has protegido la sección crítica!
+
+Fase 4: El Juez de Salida (Coordinación con wait() y notifyAll())
+
+Para asegurar una salida justa, un "Juez de Salida" debe dar una señal antes de que los corredores puedan empezar.
+
+    Crea la clase JuezSalida:
+
+        Esta clase será el objeto compartido para la coordinación.
+
+        Necesitará una variable booleana, por ejemplo, listosParaEmpezar = false;.
+
+        Crea dos métodos sincronizados:
+
+            public synchronized void esperarSalida(): Si listosParaEmpezar es false, el hilo que llame a este método deberá esperar (wait()).
+
+            public synchronized void darSalida(): Este método cambiará listosParaEmpezar a true y notificará a todos los hilos que están esperando (notifyAll()).
+
+    Modifica a los corredores y la carrera:
+
+        Crea una única instancia de JuezSalida en tu main.
+
+        Pásala a cada Corredor a través de su constructor.
+
+        En el método run() de Corredor, la primera línea de código debe ser una llamada a juez.esperarSalida().
+
+        En el main de Carrera, después de iniciar todos los hilos (.start()), haz una pausa de 2 segundos (Thread.sleep(2000)) para simular la preparación.
+
+        Después de la pausa, imprime "¡PREPARADOS, LISTOS, YA!" y llama al método juez.darSalida().
+
+    Ejecuta la simulación:
+
+        Ahora verás que, aunque los hilos se inician, no imprimen ningún mensaje de avance. Esperarán hasta que el hilo principal dé la señal de salida. ¡Has coordinado el inicio de la carrera!
+
+Fase5: La Línea de Meta y el Ganador (El Desafío Final)
+
+    El Problema: Nuestra simulación ya es justa y coordinada, pero no tenemos forma de saber quién ha ganado. Si simplemente intentas guardar el nombre del primer corredor que termina su bucle run(), te encontrarás con un nuevo problema de concurrencia: una condición de carrera en la línea de meta. ¿Qué pasaría si dos corredores terminan casi en el mismo instante? Ambos podrían pensar que son los ganadores.
+
+    Tu Tarea: Debes diseñar un mecanismo a prueba de hilos para registrar al único y verdadero ganador de la carrera.
+
+        Crea una nueva clase compartida Podio. Este objeto representará la línea de meta.
+
+        La clase Podio necesitará una forma de almacenar el nombre del ganador (una variable de instancia).
+
+        Crea un método en Podio, por ejemplo, registrarLlegada(String nombreCorredor). Este método será llamado por cada corredor justo cuando termine su carrera.
+
+        ¡El punto clave! Este método debe ser seguro para hilos (thread-safe). Debes garantizar que solo el primer corredor que llame a este método pueda establecerse como el ganador. Los corredores que lleguen después no podrán cambiar el resultado. (Pista: synchronized es tu herramienta).
+
+        En tu clase Carrera, crea una única instancia de Podio y pásala a cada Corredor en su constructor.
+
+        En la clase Corredor, al final del método run(), llama al método registrarLlegada() del podio.
+
+        Finalmente, en tu clase Carrera, después de que todos los hilos hayan finalizado (después del bucle de join()), obtén el nombre del ganador del objeto Podio y anúncialo por consola con una fanfarria.
+
+Bonus: Las Olimpiadas Modernas (Opcional - java.util.concurrent)
+
+Refactoriza la gestión de los hilos usando un ExecutorService.
+
+    En lugar de crear Thread manualmente, crea un ExecutorService de tamaño fijo (ej. Executors.newFixedThreadPool(3)).
+
+    En lugar de thread.start(), envía tus tareas Corredor (que son Runnable) al servicio usando executor.submit(corredor).
+
+    En lugar de join(), usa executor.shutdown() y luego executor.awaitTermination() para esperar a que todas las tareas finalicen.
+

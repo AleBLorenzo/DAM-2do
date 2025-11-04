@@ -1,0 +1,122 @@
+¡Felicidades por completar la simulación de la carrera! Has dominado los pilares de la concurrencia en Java. Ahora, vamos a transformar nuestra simulación en un "Simulador de Grandes Premios" totalmente configurable y profesional.
+
+Tu misión es evolucionar el programa para que, antes de cada carrera, el "Director de Carrera" (el usuario) pueda configurar todos los parámetros de la simulación a través de un menú interactivo. Después, mejorarás el motor de la simulación con las herramientas avanzadas de java.util.concurrent para hacerlo más eficiente, robusto y escalable.
+
+Requisitos Previos:
+
+    Tener la solución de la práctica anterior funcionando.
+
+    Conocimientos básicos de cómo leer la entrada del usuario desde la consola (Scanner).
+
+Fase 0: El Panel del Director de Carrera (Menú Interactivo)
+
+    El Problema: Nuestra simulación actual tiene parámetros fijos (el número de corredores, la distancia, el número de surtidores, etc.). Cada vez que queremos cambiar algo, tenemos que modificar el código y recompilar. Esto no es práctico.
+
+    Tu Tarea: Antes de mejorar el motor de la simulación, vamos a construir la cabina de control. Modifica la clase Carrera para que, al iniciarse, presente un menú al usuario y le pida configurar los siguientes parámetros antes de que empiece la carrera:
+
+        Número de Corredores: Pide al usuario que introduzca cuántos corredores participarán en la carrera.
+
+        Distancia de la Carrera: Pregunta cuántos "metros" tendrá la carrera.
+
+        Capacidad del Puesto de Avituallamiento: Pregunta cuántos "surtidores" (permisos del semáforo) tendrá el puesto de avituallamiento.
+
+        Nombres de los Corredores: Pide al usuario que introduzca el nombre de cada corredor uno por uno.
+
+    Implementación:
+
+        Usa la clase Scanner para leer la entrada del usuario desde System.in.
+
+        Guarda estos valores en variables.
+
+        Toda la lógica de creación de corredores, ExecutorService, Semaphore, etc., que implementarás en las siguientes fases, deberá usar estas variables en lugar de valores fijos.
+
+        Después de recoger todos los datos, muestra un resumen de la configuración y pregunta si desea iniciar la simulación.
+
+    Resultado Esperado: Al ejecutar el programa, lo primero que verás será un menú en la consola que te guiará para configurar la carrera. La simulación no comenzará hasta que todos los parámetros estén definidos.
+
+Fase 1: El Equipo de Mecánicos (Gestión de Hilos con ExecutorService)
+
+    El Problema: Actualmente, en nuestra clase Carrera, creamos y gestionamos los hilos (new Thread(...)) manualmente. Esto es ineficiente. Si tuviéramos 1000 corredores, crear 1000 hilos colapsaría el sistema. Los equipos profesionales no contratan a un mecánico por coche; tienen un equipo (pool) de mecánicos que atienden a los coches que llegan.
+
+    El Concepto Teórico: ExecutorService es una API que gestiona un "pool" o conjunto de hilos reutilizables. En lugar de crear un hilo por tarea, le enviamos nuestras tareas (Runnable) y el servicio se encarga de asignarlas a un hilo disponible.
+
+    Tu Tarea:
+
+        Modifica la clase Carrera. Elimina la List<Thread>.
+
+        En su lugar, crea un ExecutorService con un número fijo de hilos (por ejemplo, el número de corredores). Usa Executors.newFixedThreadPool(N).
+
+        Elimina el bucle que llama a thread.start(). En su lugar, envía cada una de tus instancias de Corredor al ExecutorService usando el método executor.submit(corredor).
+
+        Reemplaza el bucle de join() por la forma correcta de apagar un ExecutorService:
+
+            Primero, llama a executor.shutdown(). Esto le dice al servicio que no acepte más tareas y que se apague cuando terminen las actuales.
+
+            Después, usa executor.awaitTermination(tiempo, unidad) dentro de un try-catch para que el hilo main espere a que todas las tareas finalicen.
+
+    Resultado Esperado: El programa debería funcionar exactamente igual que antes, pero el código de la clase Carrera será más limpio, moderno y eficiente.
+
+Fase 2: El Cronómetro de Precisión (Callable y Future)
+
+    El Problema: Nuestro sistema de Podio para encontrar al ganador es un poco rudimentario. Solo nos dice quién ganó, pero no por cuánto tiempo. Además, el Corredor (que es Runnable) no puede devolver ningún valor, como su tiempo final de carrera.
+
+    El Concepto Teórico: La interfaz Callable<V> es una evolución de Runnable. Su método call() puede devolver un valor y lanzar excepciones. Cuando enviamos un Callable a un ExecutorService, este nos devuelve un objeto Future<V>, que es una "promesa" de que tendremos un resultado en el futuro.
+
+    Tu Tarea:
+
+        Modifica la clase Corredor para que implemente Callable<Long> en lugar de Runnable. El Long representará el tiempo de carrera en milisegundos.
+
+        Renombra el método run() a call() y haz que devuelva un Long.
+
+        Al principio del método call(), guarda el tiempo de inicio: long startTime = System.currentTimeMillis();.
+
+        Al final del método, calcula el tiempo total y devuélvelo: long endTime = System.currentTimeMillis(); return endTime - startTime;.
+
+        En la clase Carrera, al hacer executor.submit(corredor), ahora te devolverá un Future<Long>. Guarda estos Future en una lista: List<Future<Long>> resultados = new ArrayList<>();.
+
+        Elimina por completo la clase Podio. Ya no la necesitamos.
+
+        Al final, después de awaitTermination, recorre tu lista de Future. Llama al método future.get() para obtener el tiempo de cada corredor (esto puede requerir un try-catch).
+
+        Encuentra el tiempo más bajo y anuncia al ganador y su tiempo de carrera.
+
+    Resultado Esperado: El programa ahora no solo anunciará al ganador, sino también su tiempo exacto de carrera, de una forma mucho más elegante y precisa.
+
+Fase 3: Ampliando el Puesto de Avituallamiento (Semaphore)
+
+    El Problema: Nuestro PuestoAvituallamiento es un cuello de botella terrible. synchronized solo permite el paso de un hilo a la vez. ¿Y si el puesto tuviera, por ejemplo, 3 surtidores de agua para que 3 corredores puedan usarlo simultáneamente?
+
+    El Concepto Teórico: Un Semaphore (semáforo) es una herramienta de sincronización que mantiene un contador de "permisos". semaphore.acquire() intenta tomar un permiso (y se bloquea si no hay), y semaphore.release() devuelve un permiso. Si inicializamos un semáforo con 3 permisos, permitimos que 3 hilos accedan a una sección de código concurrentemente.
+
+    Tu Tarea:
+
+        Modifica la clase PuestoAvituallamiento. Elimina la palabra synchronized del método usarPuesto.
+
+        Añade un Semaphore como atributo de la clase, inicializado con el número de surtidores disponibles (ej. private Semaphore surtidores = new Semaphore(3);).
+
+        Al principio del método usarPuesto(), llama a surtidores.acquire(). Esto hará que el corredor espere si los 3 surtidores están ocupados.
+
+        MUY IMPORTANTE: Envuelve el resto del código del método en un bloque try...finally. Dentro del bloque finally, llama a surtidores.release(). Esto garantiza que el corredor "suelte" el surtidor incluso si ocurre una excepción.
+
+    Resultado Esperado: Al ejecutar la simulación, verás en la consola que hasta 3 corredores pueden estar en el puesto de avituallamiento al mismo tiempo, pero el cuarto tendrá que esperar.
+
+Fase 4: El Comentarista en Directo (BlockingQueue)
+
+    El Problema: Los mensajes de la carrera se imprimen en la consola de forma caótica desde cada hilo. Nos gustaría tener un "comentarista" centralizado que anuncie los eventos de la carrera en orden.
+
+    El Concepto Teórico: Una BlockingQueue es una cola segura para hilos. Un hilo puede "poner" (put) elementos en la cola, y otro hilo puede "cogerlos" (take). Si la cola está vacía, el hilo consumidor se bloquea (wait) hasta que haya algo. Es la implementación perfecta del patrón Productor-Consumidor.
+
+    Tu Tarea:
+
+        En la clase Carrera, crea una BlockingQueue<String> compartida (ej. new LinkedBlockingQueue<>()).
+
+        Pasa esta cola a cada Corredor.
+
+        Modifica el Corredor: en lugar de hacer System.out.println(), ahora debe construir el mensaje como un String y añadirlo a la cola usando queue.put(mensaje).
+
+        En la clase Carrera, crea y lanza un nuevo hilo "Comentarista". Su tarea (Runnable) será un bucle infinito que intenta coger mensajes de la cola (queue.take()) y los imprime en la consola.
+
+        Para poder terminar el hilo comentarista, necesitarás una forma de señalarle que la carrera ha acabado (por ejemplo, los corredores pueden poner un mensaje especial como "FIN" en la cola, o puedes usar la interrupción de hilos).
+
+    Resultado Esperado: Todos los mensajes de la carrera aparecerán en la consola de una forma más ordenada, impresos por un único hilo comentarista, demostrando una comunicación entre hilos desacoplada y segura.
+

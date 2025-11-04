@@ -1,0 +1,238 @@
+
+
+Imaginemos que somos administradores de sistemas y tenemos un fichero de log (access.log) que registra cada acceso a nuestro servidor web. El fichero es muy grande y necesitamos procesarlo para obtener información relevante de forma eficiente.
+
+Nuestra tarea será crear una aplicación en Java que:
+
+    Busque todas las líneas del log que contengan la palabra "ERROR".
+
+    Guarde esas líneas en un nuevo fichero llamado errors.log.
+
+    Cuente cuántos errores se han encontrado y muestre el total por pantalla.
+
+Paso 1: Preparación del Entorno
+
+Como buenos cocineros, lo primero es preparar nuestros ingredientes.
+
+    Crea un proyecto Java: En tu IDE favorito, crea un nuevo proyecto Java.
+
+    Crea el fichero de log: Dentro de la carpeta raíz de tu proyecto, crea un fichero de texto llamado access.log. Pega el siguiente contenido dentro de él. Simula un log real con información variada y varias líneas de error.
+     
+     
+
+    [2025-10-28 10:00:01] INFO: User 'admin' logged in successfully.
+    [2025-10-28 10:01:23] INFO: Data processed for request #123.
+    [2025-10-28 10:02:45] ERROR: Database connection failed. Timeout expired.
+    [2025-10-28 10:03:10] WARN: Disk space is running low.
+    [2025-10-28 10:04:55] INFO: Request #124 completed.
+    [2025-10-28 10:05:30] ERROR: NullPointerException at com.example.MyService:42.
+    [2025-10-28 10:06:15] INFO: Server health check OK.
+    [2025-10-28 10:07:00] ERROR: Payment failed for transaction #987.
+      
+
+Paso 2: Análisis Previo - ¿Cómo lo haríamos en la Shell?
+
+Antes de escribir una sola línea de Java, pensemos como un administrador de sistemas. Si tuvieras que resolver esto directamente en una terminal de Linux o macOS, ¿qué comando usarías?
+
+    Para buscar las líneas con "ERROR" en access.log, usaríamos el comando grep.
+
+    Para guardar el resultado en errors.log, usaríamos una redirección >.
+
+    Para contar las líneas, podríamos usar el comando wc -l (word count - lines).
+
+Una posible solución en la terminal sería una tubería (pipeline): 
+
+# Comando para buscar errores y contarlos
+grep "ERROR" access.log | wc -l
+  
+
+Este comando filtra las líneas y su salida (stdout) se convierte en la entrada (stdin) del comando wc, que las cuenta. Nuestro objetivo es replicar y mejorar esta lógica en Java.
+Paso 3: Diseño de Nuestra Solución en Java 
+
+Vamos a usar un enfoque Master/Worker, uno de los patrones que vimos en la teoría.
+
+    El Master: Será nuestro programa principal en Java. Su trabajo es iniciar y coordinar a los "trabajadores".
+
+    El Worker: Será un proceso externo que lanzaremos desde Java. En este caso, el trabajador ideal es el comando grep, ya que está altamente optimizado para buscar en ficheros.
+
+El flujo de trabajo será el siguiente:
+
+    El Master (Java) lanza un proceso Worker (grep) para que busque "ERROR" en access.log.
+
+    El Master (Java) captura la salida estándar (stdout) del worker grep línea por línea.
+
+    Por cada línea recibida, el Master hará dos cosas:
+
+        La escribirá en el fichero errors.log.
+
+        Incrementará un contador interno.
+
+    Cuando el worker termine, el Master mostrará el valor final del contador.
+
+Este diseño es flexible y nos da control total sobre el flujo de datos.
+Paso 4: ¡A programar! Creando el Proceso Worker
+
+Vamos a usar ProcessBuilder para crear nuestro proceso grep. Es la forma más moderna y configurable de hacerlo.
+ 
+ 
+
+    import java.io.File;
+import java.io.IOException;
+
+public class LogAnalyzer {
+    public static void main(String[] args) {
+        System.out.println("Iniciando análisis de logs...");
+
+        // 1. Construir el comando que queremos ejecutar
+        // Es equivalente a: grep "ERROR" access.log
+        ProcessBuilder processBuilder = new ProcessBuilder(
+            "grep",
+            "ERROR",
+            "access.log"
+        );
+
+        // Opcional pero recomendado: Redirigir el error estándar del subproceso
+        // para que se muestre en la consola de nuestro programa Java.
+        processBuilder.redirectErrorStream(true);
+
+        try {
+            // 2. Iniciar el proceso
+            System.out.println("Lanzando worker 'grep'...");
+            Process process = processBuilder.start();
+
+            // En los siguientes pasos, procesaremos la salida de este 'process'.
+
+            System.out.println("Análisis completado.");
+
+        } catch (IOException e) {
+            System.err.println("Error al ejecutar el comando. Asegúrate de que 'grep' está instalado y en el PATH del sistema.");
+            e.printStackTrace();
+        }
+    }
+}```
+
+**Explicación:**
+*   Creamos un `ProcessBuilder` pasándole el comando y sus argumentos como cadenas separadas. Esto es más seguro que pasar una única cadena.
+*   `processBuilder.start()` ejecuta el comando y nos devuelve un objeto `Process`, que es nuestro manejador para interactuar con el subproceso.
+
+### **Paso 5: Capturar y Procesar la Salida del Worker**
+
+Ahora que el proceso `grep` está en marcha, necesitamos leer lo que está "imprimiendo" en su salida estándar. Para ello, usaremos los Streams que vimos en la teoría.
+
+Añade este código dentro del bloque `try`, justo después de `Process process = processBuilder.start();`.
+
+```java
+// ... dentro del bloque try
+
+// 3. Preparar los elementos para procesar la salida del worker
+// Usamos el patrón Decorator: InputStream -> InputStreamReader -> BufferedReader
+BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+BufferedWriter writer = new BufferedWriter(new FileWriter("errors.log"));
+
+String line;
+int errorCount = 0;
+
+System.out.println("Master leyendo la salida del worker y procesando...");
+while ((line = reader.readLine()) != null) {
+    // 3a. Escribir la línea de error en nuestro fichero
+    writer.write(line + "\n");
+    
+    // 3b. Incrementar el contador
+    errorCount++;
+}
+
+// No olvides cerrar los recursos
+reader.close();
+writer.close();
+  
+
+Explicación:
+
+    process.getInputStream() nos da el InputStream conectado al stdout del proceso grep.
+
+    Envolvemos ese InputStream en un InputStreamReader (para convertir bytes a caracteres) y luego en un BufferedReader (para poder leer línea por línea con readLine(), que es muy cómodo).
+
+    Creamos un BufferedWriter para escribir de forma eficiente en errors.log.
+
+    El bucle while es el corazón de nuestro "Master": lee cada línea que el grep produce, la escribe en el fichero y actualiza el contador.
+
+Paso 6: Esperar al Proceso y Mostrar Resultados
+
+Nuestro programa Java podría terminar antes que el proceso grep, especialmente si el fichero de log es enorme. Debemos esperar a que el worker finalice su tarea y luego mostrar los resultados.
+
+Añade este código justo después de cerrar writer.
+ 
+ 
+
+    // ... después de writer.close();
+
+// 4. Esperar a que el proceso worker termine y obtener su código de salida
+int exitCode = process.waitFor();
+
+System.out.println("\nEl proceso worker 'grep' ha finalizado con el código de salida: " + exitCode);
+System.out.println("--------------------------------------------------");
+System.out.println("Total de errores encontrados: " + errorCount);
+System.out.println("Las líneas de error han sido guardadas en 'errors.log'");
+System.out.println("--------------------------------------------------");
+  
+
+Explicación:
+
+    process.waitFor() pausa la ejecución de nuestro programa Java hasta que el subproceso grep termine. Devuelve el código de salida del proceso (normalmente 0 significa que todo fue bien).
+
+    Finalmente, imprimimos el resultado de nuestro conteo.
+
+¡Ejecuta tu programa! Deberías ver la salida en la consola y un nuevo fichero errors.log en tu proyecto con las 3 líneas de error.
+Paso 7 : Implementando una Tubería con startPipeline
+
+El enfoque Master/Worker es muy flexible, pero para una tubería lineal simple como grep ... | wc -l, Java nos ofrece una forma más directa y elegante: ProcessBuilder.startPipeline().
+
+Vamos a crear una segunda versión que solo cuente los errores, pero usando este método.
+code Java
+ 
+ 
+ 
+
+    // Puedes añadir este método a tu clase LogAnalyzer
+public static void countErrorsWithPipeline() throws IOException, InterruptedException {
+    System.out.println("\n--- Contando errores con startPipeline ---");
+
+    // Worker 1: grep "ERROR" access.log
+    ProcessBuilder grepBuilder = new ProcessBuilder("grep", "ERROR", "access.log");
+
+    // Worker 2: wc -l
+    ProcessBuilder wcBuilder = new ProcessBuilder("wc", "-l");
+
+    // Crear la lista de workers para la tubería
+    List<ProcessBuilder> pipeline = List.of(grepBuilder, wcBuilder);
+
+    // Iniciar la tubería. stdout del primero se conecta a stdin del segundo.
+    List<Process> processes = ProcessBuilder.startPipeline(pipeline);
+
+    // El resultado final está en la salida del ÚLTIMO proceso de la tubería
+    Process lastProcess = processes.get(processes.size() - 1);
+
+    // Leer el resultado final
+    String count;
+    try (BufferedReader reader = new BufferedReader(new InputStreamReader(lastProcess.getInputStream()))) {
+        count = reader.readLine();
+    }
+
+    // Esperar a que el último proceso termine
+    lastProcess.waitFor();
+    
+    System.out.println("Resultado de la tubería (wc -l): " + count.trim());
+}
+  
+
+Para probarlo, llama a countErrorsWithPipeline() desde tu main.
+
+Explicación:
+
+    Creamos un ProcessBuilder para cada eslabón de la cadena.
+
+    ProcessBuilder.startPipeline() los inicia y conecta automáticamente. ¡Mucho más sencillo que manejar los streams manualmente!
+
+    Solo tenemos que leer la salida del último proceso para obtener el resultado final.
+
+
